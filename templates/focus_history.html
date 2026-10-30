@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}专注记录 · 研备{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <h1>专注记录</h1>
+      <p class="sub">按月查看 · 过去记录只读，不会被删除或覆盖</p>
+    </div>
+    <a class="btn btn-primary" href="{{ url_for('index') }}">回到仪表盘</a>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-item">
+      <span>完成番茄</span>
+      <strong>{{ completed_count }}</strong><em>个</em>
+    </div>
+    <div class="summary-item">
+      <span>专注时长</span>
+      <strong>{{ focus_minutes }}</strong><em>分钟</em>
+    </div>
+    <div class="summary-item">
+      <span>手动补录</span>
+      <strong>{{ manual_minutes }}</strong><em>分钟</em>
+    </div>
+    <div class="summary-item">
+      <span>学习总计</span>
+      <strong>{{ total_minutes }}</strong><em>分钟</em>
+    </div>
+  </div>
+
+  <section class="card">
+    <div class="month-bar">
+      <div class="head-actions">
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('focus_history', month=prev_month) }}">← 上个月</a>
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('focus_history', month=next_month) }}">下个月 →</a>
+      </div>
+      <form class="month-form" method="get" action="{{ url_for('focus_history') }}">
+        <input type="month" name="month" value="{{ month_value }}">
+        <button class="btn btn-primary btn-sm" type="submit">查看</button>
+      </form>
+    </div>
+
+    <div class="card-head">
+      <h2>{{ month_label }}</h2>
+      <span class="pill">{{ active_days }} 天有学习记录</span>
+    </div>
+
+    {% if day_list %}
+      {% for day in day_list %}
+        <article class="day-card">
+          <div class="day-head">
+            <div>
+              <strong>{{ day['date_label'] }}</strong>
+              <span class="muted">{{ day['weekday'] }}</span>
+              {% if day['date'] == today %}<span class="pill pill-ok">今天</span>{% endif %}
+            </div>
+            <div class="muted">
+              🍅 {{ day['pomodoro_count'] }} 个 · {{ day['pomodoro_minutes'] }} 分钟
+              {% if day['manual_minutes'] %} · ✍️ {{ day['manual_minutes'] }} 分钟{% endif %}
+              · 总计 {{ day['total_minutes'] }} 分钟
+            </div>
+          </div>
+          <ul class="session-list">
+            {% for session in day['sessions'] %}
+              <li class="session-item">
+                <span class="session-time">{{ session['time_range'] }}</span>
+                <span class="badge">{{ session['subject'] }}</span>
+                <span class="session-task">{{ session['plan_task'] or '自由专注' }}</span>
+                <span class="session-min">{{ session['duration_min'] }} 分钟</span>
+                <span class="status-mini {{ 'status-ok' if session['status'] == 'completed' else 'status-todo' }}">
+                  {{ '完成' if session['status'] == 'completed' else '未完成' }}
+                </span>
+              </li>
+            {% endfor %}
+            {% if day['manual_minutes'] > 0 %}
+              <li class="session-item manual-row">
+                <span>✍️</span>
+                <span class="session-task">手动补录 {{ day['manual_minutes'] }} 分钟</span>
+                <span class="muted">{{ day['note'] }}</span>
+              </li>
+            {% elif day['note'] %}
+              <li class="session-item manual-row">
+                <span>✍️</span>
+                <span class="session-task">备注：{{ day['note'] }}</span>
+              </li>
+            {% endif %}
+          </ul>
+        </article>
+      {% endfor %}
+    {% else %}
+      <div class="empty">本月还没有记录，回到仪表盘开始第一个番茄吧。</div>
+    {% endif %}
+
+    <p class="form-hint" style="margin-top: 16px;">
+      历史记录只读，不提供删除或编辑；年 / 月 / 日三级下钻将在下一轮加入。
+    </p>
+  </section>
+{% endblock %}

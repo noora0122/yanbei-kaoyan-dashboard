@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}学习计划 · 研备{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <h1>学习计划</h1>
+      <p class="sub">共 {{ total }} 条计划 · 待完成 {{ pending|length }} 条 · 先做今天能完成的事</p>
+    </div>
+    <a class="btn btn-ghost" href="{{ url_for('index') }}">返回仪表盘</a>
+  </div>
+
+  <!-- 添加计划 -->
+  <section class="card">
+    <div class="card-head">
+      <h2>添加任务</h2>
+      <span class="pill">支持任意科目</span>
+    </div>
+    <form class="plan-form" method="post" action="{{ url_for('add_plan') }}">
+      <label>
+        <span>科目</span>
+        <input type="text" name="subject" list="subject-options" maxlength="20" required
+               placeholder="如：数学 / 法硕 / 408">
+      </label>
+      <label>
+        <span>任务</span>
+        <input type="text" name="task" maxlength="200" required
+               placeholder="如：完成真题第 2 套并复盘">
+      </label>
+      <label>
+        <span>计划日期</span>
+        <input type="date" name="plan_date" value="{{ today }}" required>
+      </label>
+      <button class="btn btn-primary" type="submit">添加</button>
+    </form>
+    <datalist id="subject-options">
+      {% for subject in subjects %}
+        <option value="{{ subject }}"></option>
+      {% endfor %}
+    </datalist>
+    <p class="form-hint" style="margin-top: 12px;">科目支持自由输入；新科目会自动加入仪表盘的科目进度统计。</p>
+  </section>
+
+  <!-- 待完成 -->
+  <section class="card">
+    <div class="card-head">
+      <h2>待完成</h2>
+      <span class="pill">{{ pending|length }} 项</span>
+    </div>
+    {% if pending %}
+      <ul class="task-list">
+        {% for plan in pending %}
+          <li class="task-item">
+            <div class="task-main">
+              <span class="badge">{{ plan['subject'] }}</span>
+              <span class="task-text">{{ plan['task'] }}</span>
+              <span class="date-chip {% if plan['overdue'] %}date-overdue{% endif %}">{{ plan['date_label'] }}</span>
+              {% if plan['focus_count'] or plan['focus_minutes'] %}
+                <span class="focus-chip">🍅 {{ plan['focus_count'] }} · {{ plan['focus_minutes'] }} 分钟</span>
+              {% endif %}
+            </div>
+            <div class="row-actions">
+              <form method="post" action="{{ url_for('toggle_plan', plan_id=plan['id']) }}">
+                <button class="btn btn-success btn-sm" type="submit">完成</button>
+              </form>
+              <form method="post" action="{{ url_for('delete_plan', plan_id=plan['id']) }}"
+                    onsubmit="return confirm('确定删除这条计划吗？');">
+                <button class="btn btn-danger btn-sm" type="submit">删除</button>
+              </form>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty">没有待完成的任务，今天的计划已经清空。</div>
+    {% endif %}
+  </section>
+
+  <!-- 已完成 -->
+  {% if finished %}
+    <section class="card">
+      <div class="card-head">
+        <h2>已完成</h2>
+        <span class="pill pill-ok">{{ finished|length }} 项</span>
+      </div>
+      <ul class="task-list">
+        {% for plan in finished %}
+          <li class="task-item is-done">
+            <div class="task-main">
+              <span class="badge">{{ plan['subject'] }}</span>
+              <span class="task-text">{{ plan['task'] }}</span>
+              <span class="date-chip">{{ plan['date_label'] }}</span>
+              {% if plan['focus_count'] or plan['focus_minutes'] %}
+                <span class="focus-chip">🍅 {{ plan['focus_count'] }} · {{ plan['focus_minutes'] }} 分钟</span>
+              {% endif %}
+            </div>
+            <div class="row-actions">
+              <form method="post" action="{{ url_for('toggle_plan', plan_id=plan['id']) }}">
+                <button class="btn btn-ghost btn-sm" type="submit">撤销</button>
+              </form>
+              <form method="post" action="{{ url_for('delete_plan', plan_id=plan['id']) }}"
+                    onsubmit="return confirm('确定删除这条计划吗？');">
+                <button class="btn btn-danger btn-sm" type="submit">删除</button>
+              </form>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+{% endblock %}

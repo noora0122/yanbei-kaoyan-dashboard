@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block title %}仪表盘 · 研备{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <h1>仪表盘</h1>
+      <p class="sub">{{ today_cn }} · {{ weekday_cn }} · {{ profile['stage'] }}</p>
+    </div>
+    <div class="head-actions">
+      <a class="btn btn-ghost" href="{{ url_for('focus_history') }}">专注记录</a>
+      <a class="btn btn-primary" href="{{ url_for('plans') }}">＋ 新建任务</a>
+    </div>
+  </div>
+
+  <!-- 四个核心数字 -->
+  <div class="stats-grid">
+    <section class="card countdown">
+      <div class="stat-label">距离考研初试</div>
+      <div class="countdown-value">
+        {% if days_left > 0 %}
+          {{ days_left }}<span class="unit">天</span>
+        {% elif days_left == 0 %}
+          今天<span class="unit">开考</span>
+        {% else %}
+          已结束
+        {% endif %}
+      </div>
+      <div class="countdown-foot">
+        <span>{{ exam_date.strftime('%Y-%m-%d') }}</span>
+        <span class="stage-pill">{{ profile['stage'] }}</span>
+      </div>
+    </section>
+
+    <section class="card" id="today-card" data-daily-target="{{ daily_target }}">
+      <div class="stat-label">今日学习</div>
+      <div class="stat-value"><span id="today-total-minutes">{{ today_minutes }}</span><span class="unit">/ {{ daily_target }} 分钟</span></div>
+      <div class="progress">
+        <div class="progress-bar" id="today-progress-bar" style="width: {{ today_pct }}%"></div>
+      </div>
+      <div class="study-breakdown">
+        <span>🍅 <strong id="today-pomodoro-minutes">{{ today_pomodoro_minutes }}</strong> 分钟 · <span id="today-pomodoro-count">{{ today_pomodoro_count }}</span> 个</span>
+        <span>✍️ <strong id="today-manual-minutes">{{ today_manual }}</strong> 分钟手动</span>
+      </div>
+      <p class="stat-hint" id="today-hint">
+        {% if today_pct >= 100 %}
+          今日目标已达成，保持节奏。
+        {% elif today_minutes > 0 %}
+          还差 {{ daily_target - today_minutes }} 分钟达标。
+        {% else %}
+          今天还没记录，先开始一个番茄吧。
+        {% endif %}
+      </p>
+    </section>
+
+    <section class="card">
+      <div class="stat-label">连续打卡</div>
+      <div class="stat-value"><span id="streak-number">{{ streak }}</span><span class="unit">天</span></div>
+      <p class="stat-hint" id="streak-hint">
+        {% if has_today_record %}
+          今天已有学习记录，继续保持。
+        {% else %}
+          今天还没记录，别断了连续记录。
+        {% endif %}
+      </p>
+    </section>
+
+    <section class="card completion-card">
+      <div class="stat-label">计划完成率</div>
+      <div class="donut"
+           style="background: conic-gradient(#0d9488 0 {{ completion_rate }}%, #e8eef5 {{ completion_rate }}% 100%);">
+        <div class="donut-inner">
+          <strong>{{ completion_rate }}%</strong>
+          <span>{{ done_plans }}/{{ total_plans }} 项</span>
+        </div>
+      </div>
+      <p class="stat-hint" style="text-align: center; margin-top: 10px;">全部计划累计</p>
+    </section>
+  </div>
+
+  <div class="content-grid">
+    <div class="col">
+      <!-- 近 7 天趋势 -->
+      <section class="card">
+        <div class="card-head">
+          <h2>近 7 天学习时长</h2>
+          <span class="pill">累计 {{ week_total }} 分钟</span>
+        </div>
+        <div class="chart" style="--target-line: {{ target_line }}%;">
+          <div class="chart-plot">
+            <div class="target-line"><span>目标 {{ daily_target }}</span></div>
+            {% for day in week %}
+              <div class="bar-col">
+                <div class="bar-stack {% if day['is_today'] %}bar-today{% endif %}"
+                     style="height: {{ day['height'] }}%;"
+                     title="{{ day['date'] }} · 🍅 {{ day['pomodoro_minutes'] }} 分钟 / ✍️ {{ day['manual_minutes'] }} 分钟">
+                  <div class="bar-pomodoro" style="height: {{ day['pomodoro_pct'] }}%;"></div>
+                  <div class="bar-manual" style="height: {{ day['manual_pct'] }}%;"></div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          <div class="chart-axis">
+            {% for day in week %}
+              <div class="axis-item {% if day['is_today'] %}is-today{% endif %}">
+                <strong>{{ day['minutes'] }}</strong>
+                <span>{{ day['label'] }}</span>
+              </div>
+            {% endfor %}
+          </div>
+          <div class="chart-legend">
+            <span><i class="dot dot-pomodoro"></i>🍅 番茄</span>
+            <span><i class="dot dot-manual"></i>✍️ 手动补录</span>
+          </div>
+        </div>
+        <p class="chart-note">日均 {{ week_avg }} 分钟 · 虚线为每日目标 {{ daily_target }} 分钟</p>
+      </section>
+
+      <!-- 科目进度 -->
+      <section class="card">
+        <div class="card-head">
+          <h2>科目进度</h2>
+          <span class="pill">{{ subject_stats|length }} 个科目</span>
+        </div>
+        {% if subject_stats %}
+          <div class="subject-list">
+            {% for item in subject_stats %}
+              <div class="subject-row">
+                <div class="subject-top">
+                  <span class="badge">{{ item['name'] }}</span>
+                  <span class="subject-count">{{ item['done'] }} / {{ item['total'] }} 项</span>
+                </div>
+                <div class="progress progress-sm">
+                  <div class="progress-bar" style="width: {{ item['pct'] }}%"></div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty">还没有科目，去设置里添加。</div>
+        {% endif %}
+      </section>
+    </div>
+
+    <div class="col">
+      <!-- 开始专注 -->
+      <section class="card" id="start-focus">
+        <div class="card-head">
+          <h2>开始专注</h2>
+          <span class="pill">🍅 {{ focus_config['focus_minutes'] }} 分钟 / 轮</span>
+        </div>
+        <form id="focus-start-form" class="stack-form">
+          <label>
+            <span>关联今日计划（可选）</span>
+            <select id="focus-plan">
+              <option value="">自由专注</option>
+              {% for plan in today_plans %}
+                <option value="{{ plan['id'] }}"
+                        data-subject="{{ plan['subject'] }}"
+                        data-task="{{ plan['task'] }}">
+                  {{ plan['subject'] }} · {{ plan['task'] }}{% if plan['done'] %}（已完成）{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </label>
+          <label id="focus-subject-wrap">
+            <span>科目</span>
+            <select id="focus-subject">
+              {% for subject in profile['subjects'] %}
+                <option value="{{ subject }}">{{ subject }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <button class="btn btn-primary" type="submit">
+            开始 {{ focus_config['focus_minutes'] }} 分钟专注
+          </button>
+        </form>
+        <div id="focus-active-note" class="focus-active-note" hidden>
+          <p>正在计时中，查看右下角悬浮计时器。</p>
+        </div>
+        <p class="form-hint" id="focus-start-hint">
+          完成后自动计入今日学习时长；可随时暂停或提前结束。
+        </p>
+      </section>
+
+      <!-- 今日任务 -->
+      <section class="card">
+        <div class="card-head">
+          <h2>今日任务</h2>
+          <span class="pill">{{ today_done }}/{{ today_total }} 完成</span>
+        </div>
+        {% if today_plans %}
+          <ul class="task-list">
+            {% for plan in today_plans %}
+              <li class="task-item {% if plan['done'] %}is-done{% endif %}">
+                <div class="task-main">
+                  <span class="badge">{{ plan['subject'] }}</span>
+                  <span class="task-text">{{ plan['task'] }}</span>
+                  {% if plan['focus_count'] or plan['focus_minutes'] %}
+                    <span class="focus-chip">🍅 {{ plan['focus_count'] }} · {{ plan['focus_minutes'] }} 分钟</span>
+                  {% endif %}
+                </div>
+                <form method="post" action="{{ url_for('toggle_plan', plan_id=plan['id']) }}">
+                  <input type="hidden" name="next" value="{{ url_for('index') }}">
+                  <button class="btn btn-sm {% if plan['done'] %}btn-ghost{% else %}btn-success{% endif %}" type="submit">
+                    {{ '撤销' if plan['done'] else '完成' }}
+                  </button>
+                </form>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="empty">今天还没有任务，<a href="{{ url_for('plans') }}">去添加一条</a>。</div>
+        {% endif %}
+      </section>
+
+      <!-- 手动补录 -->
+      <section class="card">
+        <div class="card-head">
+          <h2>手动补录</h2>
+          <span class="pill">✍️ 不计入番茄</span>
+        </div>
+        <form class="stack-form" method="post" action="{{ url_for('save_checkin') }}">
+          <label>
+            <span>手动补录（分钟）</span>
+            <input type="number" name="manual_minutes" min="0" max="1440" step="1" required
+                   value="{{ today_checkin['manual_minutes'] if today_checkin else '' }}"
+                   placeholder="例如：60">
+          </label>
+          <label>
+            <span>备注</span>
+            <textarea name="note" rows="3" placeholder="补录的是什么学习内容？">{{ today_checkin['note'] if today_checkin else '' }}</textarea>
+          </label>
+          <button class="btn btn-primary" type="submit">
+            {{ '更新手动补录' if today_checkin else '保存手动补录' }}
+          </button>
+          <p class="form-hint">只记录没有计入番茄的时长；不会覆盖番茄记录。</p>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <!-- 最近 7 天记录 -->
+  <section class="card">
+    <div class="card-head">
+      <h2>最近 7 天记录</h2>
+      <a class="pill" href="{{ url_for('focus_history') }}">查看完整历史 →</a>
+    </div>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>日期</th>
+          <th>🍅 番茄</th>
+          <th>✍️ 手动</th>
+          <th>总计</th>
+          <th>备注</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for day in week_recent %}
+          <tr>
+            <td>
+              {{ day['date_label'] }}
+              {% if day['is_today'] %}<span class="pill pill-ok">今天</span>{% endif %}
+            </td>
+            <td>{{ day['pomodoro_minutes'] }} 分钟</td>
+            <td>{{ day['manual_minutes'] }} 分钟</td>
+            <td><strong>{{ day['minutes'] }}</strong> 分钟</td>
+            <td class="muted">{{ day['note'] or '—' }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}{{ '初始设置' if not profile['setup_done'] else '平台设置' }} · 研备{% endblock %}
+
+{% block content %}
+  {% if not profile['setup_done'] %}
+    <section class="welcome-card">
+      <span class="welcome-tag">30 秒初始设置</span>
+      <h1>先告诉平台你的目标</h1>
+      <p>考试日期、当前阶段、每日目标和科目，会决定倒计时、趋势图与完成率的计算方式。所有内容之后都能在「设置」里修改。</p>
+    </section>
+  {% else %}
+    <div class="page-head">
+      <div>
+        <h1>平台设置</h1>
+        <p class="sub">修改考试目标与科目配置，看板数据会立即同步</p>
+      </div>
+    </div>
+  {% endif %}
+
+  <section class="card">
+    <div class="card-head">
+      <h2>{{ '完成初始设置' if not profile['setup_done'] else '目标与科目' }}</h2>
+      <span class="pill">配置驱动</span>
+    </div>
+    <form class="settings-form" method="post" action="{{ url_for('save_settings') }}">
+      <label>
+        <span>考试日期</span>
+        <input type="date" name="exam_date" value="{{ profile['exam_date'].strftime('%Y-%m-%d') }}" required>
+      </label>
+      <label>
+        <span>当前阶段</span>
+        <select name="stage">
+          {% for stage in stages %}
+            <option value="{{ stage }}" {% if profile['stage'] == stage %}selected{% endif %}>{{ stage }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        <span>每日目标（分钟）</span>
+        <input type="number" name="daily_target" min="30" max="1440" step="1" required
+               value="{{ profile['daily_target'] }}">
+      </label>
+
+      <div class="form-section-title span-2">番茄钟</div>
+      <label>
+        <span>专注时长（分钟）</span>
+        <input type="number" name="focus_minutes" min="1" max="120" step="1" required
+               value="{{ profile['focus_minutes'] }}">
+      </label>
+      <label>
+        <span>短休时长（分钟）</span>
+        <input type="number" name="short_break_minutes" min="1" max="60" step="1" required
+               value="{{ profile['short_break_minutes'] }}">
+      </label>
+      <label>
+        <span>长休时长（分钟）</span>
+        <input type="number" name="long_break_minutes" min="1" max="120" step="1" required
+               value="{{ profile['long_break_minutes'] }}">
+      </label>
+      <label>
+        <span>每几个番茄长休</span>
+        <input type="number" name="long_break_every" min="1" max="12" step="1" required
+               value="{{ profile['long_break_every'] }}">
+      </label>
+      <p class="form-hint span-2">番茄结束时可选择休息；休息时间不计入学习时长。</p>
+
+      <label class="span-2">
+        <span>科目（自由输入，用逗号分隔）</span>
+        <input type="text" name="subjects" maxlength="300" required
+               value="{{ subjects_text }}"
+               placeholder="例如：数学，英语，政治，专业课">
+      </label>
+      <p class="form-hint span-2">
+        科目会用于任务归类和看板统计，最多 12 个。之后学习计划里输入新科目，也会自动补充到这里。
+      </p>
+      <div class="form-actions span-2">
+        <button class="btn btn-primary" type="submit">
+          {{ '保存并进入仪表盘' if not profile['setup_done'] else '保存设置' }}
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>演示数据</h2>
+      <span class="pill">可选</span>
+    </div>
+    <p class="muted" style="margin-top: 0;">
+      当前有 {{ plan_count }} 条计划、{{ checkin_count }} 条手动补录、{{ session_count }} 条番茄记录。
+      重置会清空现有计划、补录和番茄记录，并重新生成一套以今天为基准的示例数据；考试日期、阶段、科目等设置会保留。
+      此按钮仅用于课程演示，正式使用时可以移除。
+    </p>
+    <form method="post" action="{{ url_for('reset_demo') }}"
+          onsubmit="return confirm('确定重置演示数据吗？现有计划、补录和番茄记录都会被清空。');">
+      <button class="btn btn-ghost" type="submit">重置示例数据（仅演示）</button>
+    </form>
+  </section>
+{% endblock %}

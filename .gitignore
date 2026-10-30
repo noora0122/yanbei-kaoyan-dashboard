@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 本地数据库（首次运行自动生成，不提交）
+*.db
+kaoyan.db
+
+# 环境与编辑器
+.env
+.DS_Store
+.vscode/
+.idea/
+docs/.edge-profile/
